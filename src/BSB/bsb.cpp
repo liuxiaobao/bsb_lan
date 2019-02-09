@@ -142,7 +142,12 @@ bool BSB::GetMessage(byte* msg) {
       // Restore otherwise dropped SOF indicator
       msg[i++] = read;
       if (bus_type == 2 && read == 0x17) {
-        return true; // PPS-Bus request byte 0x17 just contains one byte, so return
+	uint8_t PPS_write_enabled = myAddr;
+	if (PPS_write_enabled == 1) {
+          return true; // PPS-Bus request byte 0x17 just contains one byte, so return
+	} else {
+	  len_idx = 9;
+	}
       }
 
       // Delay for more data
@@ -190,6 +195,7 @@ bool BSB::GetMessage(byte* msg) {
 
       if (bus_type == 2) {
         if (i == len_idx+1) {
+	  len_idx = 8;
           return true; // TODO: add CRC check before returning true/false
         }
       } else {
@@ -294,6 +300,7 @@ inline bool BSB::_send(byte* msg) {
       msg[len] = crc;
     }
   }
+
 #if DEBUG_LL  
   print(msg);
 #endif  
@@ -337,6 +344,19 @@ Teilnehmer in dieser Zeit eine "1" senden - also den Bus herunterziehen,
 dann höre ich sofort auf mit dem Senden und fange oben wieder an.
 Danach folgen nach gleichem Muster die folgenden Bits, Bit 7..0, Parity
 und Stop Bit.
+*/
+
+/* 
+FH 27.12.2018: Wer auch immer das obige geschrieben hat, es macht bezogen auf
+den nachfolgenden Code keinen Sinn: 
+1. Es wird hier nicht bitweise gesendet, sondern ein ganzes Byte an
+BSBSoftwareSerial::write übergeben. Dort wird dann unabhängig davon, ob der 
+Bus frei ist oder nicht, dieses komplette Byte inkl. Start-, Stop- und Parity-
+Bytes gesendet.
+2. BSBSoftwareSerial::write gibt immer 1 zurück, außer wenn _tx_delay == 0 ist.
+Diese Variable wird aber nur einmalig bei Aufruf von BSBSoftwareSerial::begin
+gesetzt und wäre nur in seltenen Ausnahmefällen == 0.
+So wie es jetzt scheint, findet die Kollisionsprüfung beim Senden nicht statt.
 */
 
   cli();
@@ -411,9 +431,12 @@ bool BSB::Send(uint8_t type, uint32_t cmd, byte* rx_msg, byte* tx_msg, byte* par
 
   i=15;
 
-  unsigned long timeout = millis() + 1000;
+  unsigned long timeout = millis() + 3000;
   while ((i > 0) && (millis() < timeout)) {
     if (GetMessage(rx_msg)) {
+      Serial.print(F("Duration: "));
+      Serial.println(3000-(timeout-millis()));
+
       i--;
       if (bus_type == 1) {
 /* Activate for LPB systems with truncated error messages (no commandID in return telegram) 
@@ -434,5 +457,6 @@ bool BSB::Send(uint8_t type, uint32_t cmd, byte* rx_msg, byte* tx_msg, byte* par
       delayMicroseconds(205);
     }
   }
+  Serial.println(F("Timeout waiting for answer..."));
   return false;
 }

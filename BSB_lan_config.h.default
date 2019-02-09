@@ -12,10 +12,15 @@
  * (port 80 is default for HTTP):
 */
 
-//#define ETHERNET_W5500          // activate for newer Ethernet2-Shields and unzip Ethernet2.zip (provided in the "src" directory)
 #define Port 80
-#define IPAddr 192,168,178,88   // please note the commas instead of dots!!!
+#define IPAddr 192,168,178,88   // please note the commas instead of dots!!! Remove this line when you want DHCP
 //#define GatewayIP 192,168,178,1 // Optional: this is usually your router's IP address. Please note the commas instead of dots!!!
+//#define GatewayIP 192,168,178,1 // this is usually your router's IP address. It is assumed that gateway and DNS are the same. Please note the commas instead of dots!!!
+//#define SubnetIP 255,255,255,0  // Please use commas insteaf of dots!!!
+
+//#define WIFI  // activate if you are using an ESP8266 AT-firmware based WiFi module
+char ssid[] = "Your_WiFi_name_goes_here";            // your network SSID (name)
+char pass[] = "Your_WiFi_password_goes_here";        // your network password
 
 /* SECURITY OPTIONS
  * There are several options to control and protect access to your heating system. However, keep  
@@ -62,7 +67,7 @@ const int fixed_device_variant = 0;
 #define LANG_DE
 
 // Hide unknown parameters from web display (parameters will still be queried!)
-#define HIDE_UNKNOWN
+//#define HIDE_UNKNOWN
 
 /*
  * Define the pin for one wire temperature sensors
@@ -101,6 +106,13 @@ unsigned long log_interval = 3600;    // logging interval in seconds
 boolean log_unknown_only = 1;         // should we log only unknown commands when logging bus telegrams?
 boolean log_bc_only = 0;              // should we log only broadcast commands (dest = 0x7f) when logging bus telegrams?
 
+// Activate sending log_parameters to MQTT broker every log_interval seconds
+//#define MQTTBrokerIP 192,168,1,20	// Please use commas insteaf of dots!!!
+//#define MQTTUsername "User" // Set username for MQTT broker here or comment out if no username/password is used.
+//#define MQTTPassword "Pass" // Set password for MQTT broker here or comment out if no password is used.
+//#define MQTTTopicPrefix "BSB-LAN" // Choose the "topic" for MQTT messages here
+
+
 // Activate IPWE extension (http://xxx.xxx.xxx.xxx/ipwe.cgi)
 #define IPWE
 
@@ -137,6 +149,8 @@ const char max_device_list[] PROGMEM = {        // list of MAX! wall/heating the
 */
 byte mac[] = { 0x00, 0x80, 0x41, 0x19, 0x69, 0x90 };
 
+// Setting bus pins and bus type
+// Bus bus (RX pin, TX pin, parameter 3, parameter 4)
 // Software Serial needs special pins for RX: 10-13, 50-53, 62(A8)-69(A15)
 // W5100 ethernet shield uses the following pins: 10, 50-53
 // BSB: 
@@ -146,9 +160,10 @@ byte mac[] = { 0x00, 0x80, 0x41, 0x19, 0x69, 0x90 };
 // - third and fourth parameter set own and destination address (high nibble = segment, low nibble = device minus 1)
 // - defaults to 0x06 for own address and 0x00 for destination address, i.e. segment 0, device 7 for Arduino and segment 0, device 1 for heating system
 // PPS:
-// - third and fourth parameter do not have any effect due to the bus
+// - third parameter set to "1" enables writing to heater - only use this if there is no other room controller (such as QAA50/QAA70) active. Fourth parameter does not have any effect.
 BSB bus(68,69);
 uint8_t bus_type = bus.setBusType(0);  // set bus system at boot: 0 = BSB, 1 = LPB, 2 = PPS
+//#define QAA_TYPE  0x53  // 0x53 = QAA70, 0x52 = QAA50
 
 // Protect these pins from accidental GPIO access
 const byte exclude_GPIO[] = {10, 11, 12, 13, 50, 51, 52, 53, 62, 63, 64, 65, 66, 67, 68, 69};
